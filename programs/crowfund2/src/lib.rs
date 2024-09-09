@@ -15,7 +15,7 @@ pub mod cagnotte2 {
         // intisalise la cagnotte  avec un montant de 0 PDA a init avec une seed qui attend le nom (string) cagnotte, la clé publique de
         // la clé publique de l'utilisateur et la string du nom de la cagnotte.
         cagnotte.locked = false;
-        //cagnotte.contributions.push((*ctx.accounts.user.key, 0));
+        //cagnotte.contributions.push(*ctx.accounts.user.key, 0));
         Ok(())
     }
 
@@ -97,6 +97,24 @@ pub mod cagnotte2 {
 
         ctx.accounts.cagnotte.amount += amount;
         ctx.accounts.contribution.amount += amount;
+
+        // Check if the user already exists in the contributions vector
+        let mut found = false;
+        for contribution in ctx.accounts.cagnotte.contributions.iter_mut() {
+            if contribution.user == *ctx.accounts.user.key {
+                contribution.amount += amount; // Update the contribution amount
+                found = true;
+                break;
+            }
+        }
+        // If the user wasn't found in the contributions list, add them
+        if !found {
+            ctx.accounts.cagnotte.contributions.push(Contributions {
+                user: *ctx.accounts.user.key,
+                amount: amount,
+            });
+        }
+
         Ok(())
     }
 
@@ -193,7 +211,7 @@ pub struct Initialize<'info> {
     #[account(
         init, 
         payer = user, 
-        space = 8 + 32 + 4 + 64 + 1,  
+        space = 8 + 32 + 4 + 8 + 1 + (32 + 8) * 10, // Max 10 contributions Per Cagnotte
         seeds = [b"cagnotte", user.key().as_ref(), name.as_bytes()], 
         bump
     )]
